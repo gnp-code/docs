@@ -1,0 +1,81 @@
+---
+title: "Receiving"
+description: "Vendor invoices and credit memos: capture, three-way match against orders and receipts, verify and lock."
+icon: "inbox"
+---
+
+<Info>
+**Status:** Planned, not built. Linear project [Receiving](https://linear.app/magpiedirective/project/receiving-0121b5458ff7), parent issue [MAG-196](https://linear.app/magpiedirective/issue/MAG-196).
+</Info>
+
+## What it is
+
+Receiving is the accounts-payable side of Magpie Directive. It covers **what vendors bill us**. Vendor invoices and credit memos come in, get checked against what was ordered and what actually arrived, and are locked once a person verifies them. Payment is a separate build.
+
+<CardGroup cols={2}>
+  <Card title="Receiving (this module)" icon="arrow-down-to-bracket">
+    Inbound. Vendor invoices, credit memos, three-way match, verify and lock. Reads inbound EDI 810s.
+  </Card>
+  <Card title="Billing (separate)" icon="file-invoice-dollar">
+    Outbound. Generates 810s to other systems and invoices to our clients' clients from products, recipes, menus, events or pass-through inventory.
+  </Card>
+</CardGroup>
+
+<Note>
+Goods receipt, meaning receiving product into inventory, stays in **Purchase Orders** because it needs its direct tie to orders. Receiving works with the vendor's paperwork against those receipts.
+</Note>
+
+## How an invoice arrives
+
+Every invoice keeps its **source file** attached beside the digitized record. The record is what gets matched; the file is the evidence.
+
+| Source | How it's digitized | Issue |
+|---|---|---|
+| Hand entry | Pre-filled from the order | [MAG-198](https://linear.app/magpiedirective/issue/MAG-198) |
+| Inbound EDI 810 | From the EDI service | [MAG-201](https://linear.app/magpiedirective/issue/MAG-201) |
+| Emailed PDF or image | Extracted automatically, then verified by a person | [MAG-202](https://linear.app/magpiedirective/issue/MAG-202) |
+
+## Three-way match
+
+Each invoice line is checked against the **ordered** price and quantity, what was **received** after corrections, and any **accepted credits** ([MAG-170](https://linear.app/magpiedirective/issue/MAG-170)).
+
+**Tolerances cascade.** The organization sets a default that applies to every vendor, and each vendor can be adjusted independently. Per-account tolerances aren't supported yet.
+
+## Credits
+
+Credits arrive in two ways, and both are supported ([MAG-199](https://linear.app/magpiedirective/issue/MAG-199)):
+
+- **As an adjustment** on the invoice itself.
+- **As a separate credit memo** later. Universities often pay the original invoice in full and receive the credit afterwards.
+
+Either way, the credit matches against the original invoice, and against the order where possible. A credit memo is its own document, never a negative line on the next invoice.
+
+## Separation of duties
+
+Whoever places orders cannot reconcile invoices ([MAG-180](https://linear.app/magpiedirective/issue/MAG-180)).
+
+| Rule | Detail |
+|---|---|
+| Default | **By role.** Ordering roles cannot reconcile invoices or credit memos. |
+| Per-person option | An organization can also turn on a check so that no one can reconcile an invoice for an order they placed. |
+| Override | **Organization admins** can apply it. It is audited and shown on the record. |
+| Owners | Can perform every action. |
+
+## Verify and lock
+
+A **person** verifies a matched invoice ([MAG-200](https://linear.app/magpiedirective/issue/MAG-200)). Agents can enter invoices and run matches, but they cannot verify.
+
+Once verified, the **whole record locks**: no adjustments and no credits posted against it. **Only an admin can unlock** it, and every unlock is audited.
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Node.js + TypeScript (NestJS, `apps/main-app/src/receiving`), Postgres via Prisma |
+| Frontend | Next.js + Tailwind CSS (`apps/web`) ([MAG-203](https://linear.app/magpiedirective/issue/MAG-203)) |
+| Agents | MCP tools over the same service as REST |
+
+## Still open
+
+- **Source file storage.** Where PDFs, images and raw 810s live.
+- **What "admin" means.** A new organization-level role, or an override capability granted to chosen roles.

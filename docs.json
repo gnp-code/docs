@@ -49,6 +49,12 @@
               "support/faq",
               "support/troubleshooting"
             ]
+          },
+          {
+            "group": "Modules",
+            "pages": [
+              "modules/receiving"
+            ]
           }
         ]
       },
