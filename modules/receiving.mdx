@@ -58,14 +58,23 @@ Whoever places orders cannot reconcile invoices ([MAG-180](https://linear.app/ma
 |---|---|
 | Default | **By role.** Ordering roles cannot reconcile invoices or credit memos. |
 | Per-person option | An organization can also turn on a check so that no one can reconcile an invoice for an order they placed. |
-| Override | **Organization admins** can apply it. It is audited and shown on the record. |
-| Owners | Can perform every action. |
+| Override | Needs the `receiving.override` permission. It is audited and shown on the record. |
+| Owners | The **Organization owner** is the general admin and can perform every action. |
+
+### Receiving roles
+
+Neither role can place orders ([MAG-206](https://linear.app/magpiedirective/issue/MAG-206)).
+
+| Role | Scope | Can do |
+| --- | --- | --- |
+| AP clerk | Organization or tenant | Enter, match and verify invoices and credit memos |
+| AP manager | Organization | Everything an AP clerk can, plus override (`receiving.override`) and unlock (`receiving.unlock`) |
 
 ## Verify and lock
 
 A **person** verifies a matched invoice ([MAG-200](https://linear.app/magpiedirective/issue/MAG-200)). Agents can enter invoices and run matches, but they cannot verify.
 
-Once verified, the **whole record locks**: no adjustments and no credits posted against it. **Only an admin can unlock** it, and every unlock is audited.
+Once verified, the **whole record locks**: no adjustments and no credits posted against it. **Only the owner or an AP manager can unlock** it, and every unlock is audited.
 
 ## Stack
 
@@ -77,5 +86,8 @@ Once verified, the **whole record locks**: no adjustments and no credits posted 
 
 ## Still open
 
-- **Source file storage.** Where PDFs, images and raw 810s live.
-- **What "admin" means.** A new organization-level role, or an override capability granted to chosen roles.
+- **Who can assign the AP roles.** A regional manager places orders, so letting them appoint the person who reconciles those orders would weaken separation of duties.
+
+## Source files
+
+Source files are stored in **Supabase Storage**, in a private bucket where each organization has its own folder. Files open only through short-lived signed links. Each file has a checksum recorded, and files are never overwritten or deleted.
