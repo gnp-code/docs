@@ -1,0 +1,87 @@
+---
+title: "Customize Your Magpie Directive Workspace Settings"
+sidebarTitle: "Customization"
+description: "Brand your workspace, define custom metadata fields, build entry templates, and visually organize collections in Magpie Directive."
+---
+
+Magpie Directive gives you a range of customization options so your workspace feels like a natural extension of your team's identity and workflow. You can apply your own branding, define the metadata fields that matter to your organization, build reusable entry templates that enforce consistency, and color-code collections for fast visual navigation — all without writing a line of code.
+
+## Workspace Branding
+
+Make the workspace recognizable to your team by applying your organization's visual identity. Access all branding options under **Settings → Branding**.
+
+- **Workspace Logo** — Upload a logo image (PNG or SVG, maximum 2 MB) that appears in the top-left corner of the dashboard and in member invitation emails. For best results, use a horizontal lockup with a transparent background.
+- **Workspace Icon** — Upload a square icon (PNG, minimum 256 × 256 px) used as the browser favicon and in mobile bookmarks.
+- **Workspace URL Slug** — Customize the subdomain for your workspace. For example, setting the slug to `yourcompany` makes your workspace accessible at `yourcompany.magpiedirective.com`. Slugs must be lowercase, contain only letters, numbers, and hyphens, and be globally unique.
+
+<Warning>
+  Changing your workspace URL slug immediately invalidates all existing links that use the old URL. Update any bookmarks, internal wikis, or integrations that reference the previous address before making the change.
+</Warning>
+
+## Custom Fields
+
+Custom fields let you attach structured metadata to entries beyond the built-in title and body. This is particularly powerful when you want to filter, sort, or query your knowledge base by attributes specific to your organization — such as a product area, an owner, a severity level, or a review date.
+
+Access custom field management under **Settings → Custom Fields** and click **New Field** to define one.
+
+<Tabs>
+  <Tab title="Text">
+    A free-form single-line or multi-line text input. Use this for fields like `Owner`, `Source`, or `Related Team` where the value is a short string.
+  </Tab>
+  <Tab title="Number">
+    A numeric input that accepts integers or decimals. Use this for fields like `Priority Score`, `Estimated Hours`, or `Version Number`.
+  </Tab>
+  <Tab title="Date">
+    A date picker that stores a calendar date (with optional time). Use this for fields like `Review Date`, `Published On`, or `Expiry`.
+  </Tab>
+  <Tab title="Select">
+    A dropdown with a predefined list of options you configure. Use this for fields like `Status` (Draft / In Review / Published), `Category`, or `Severity`. You can allow single or multiple selections.
+  </Tab>
+</Tabs>
+
+Once created, custom fields appear in the entry editor's right-hand panel for all entries in your workspace. You can reorder fields by dragging them in **Settings → Custom Fields**, and you can mark any field as **Required** to ensure editors always populate it before publishing.
+
+## Entry Templates
+
+Entry templates give your team a head start on common knowledge types, pre-populating structure, section headers, and custom field defaults so that every Runbook, Meeting Note, or Decision Record follows the same format.
+
+<Steps>
+  <Step title="Open Templates settings">
+    Navigate to **Settings → Templates** and click **New Template**.
+  </Step>
+  <Step title="Name and describe your template">
+    Give the template a clear name (e.g., `Runbook`, `Meeting Notes`, `Decision Record`, `Incident Report`) and an optional description so team members know when to use it.
+  </Step>
+  <Step title="Build the template body">
+    Use the full Magpie Directive editor to write the template content. Add section headers, placeholder text, callout blocks, and any structural elements that should appear in every entry of this type.
+  </Step>
+  <Step title="Set custom field defaults">
+    In the right-hand panel, pre-fill any custom field values that should default for this entry type — for example, setting `Status` to `Draft` or `Category` to `Incident`.
+  </Step>
+  <Step title="Save and publish the template">
+    Click **Save Template**. The template is immediately available to all Editors in the **New Entry** dialog under the **From Template** tab.
+  </Step>
+</Steps>
+
+<Tip>
+  Use templates to enforce a consistent knowledge structure across your team. When everyone uses the same Runbook or Decision Record template, information is easier to find, audit, and hand off — especially during incidents or onboarding.
+</Tip>
+
+## Collection Colors and Icons
+
+Color-coding and icon assignments let your team scan the sidebar at a glance and immediately orient themselves within the knowledge base — no need to read every collection name to find the right one.
+
+To customize a collection's appearance, open the collection, click the **⋯** menu in the top-right, and select **Collection Settings → Appearance**.
+
+<CardGroup cols={2}>
+  <Card title="Collection Color" icon="palette">
+    Choose from a curated palette of 16 colors. The selected color is applied to the collection's sidebar indicator, the collection header banner, and any breadcrumb references to the collection throughout the interface.
+  </Card>
+  <Card title="Collection Icon" icon="icons">
+    Pick an icon from the built-in icon library (over 300 options) to represent the collection's subject matter at a glance — for example, a terminal icon for Engineering runbooks or a calendar icon for Meeting Notes.
+  </Card>
+</CardGroup>
+
+<Info>
+  Collection colors and icons are purely cosmetic — they have no effect on access control, search ranking, or API behavior. You can change them at any time without affecting your content.
+</Info>

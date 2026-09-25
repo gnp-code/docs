@@ -1,0 +1,73 @@
+---
+title: "Manage Team Permissions and Access in Magpie Directive"
+sidebarTitle: "Permissions"
+description: "Set up roles, invite team members, and control who can access collections using Magpie Directive's role-based access control model."
+---
+
+Magpie Directive uses a role-based access control model to ensure that the right people have the right level of access to your knowledge base. Every member of a workspace is assigned a role that determines what they can see and do — from reading published entries to managing integrations and billing. You assign and change roles at any time from the Members settings page.
+
+## Roles
+
+Three built-in roles cover the full range of access needs in a Magpie Directive workspace.
+
+| Role | Permissions |
+|---|---|
+| `Owner` | Full access to all workspace features, including billing management, workspace settings, member administration, and the ability to delete the workspace. There can only be one Owner per workspace, though ownership can be transferred. |
+| `Editor` | Can create, edit, and delete entries and collections. Can manage integrations and invite new members up to the Editor role. Cannot access billing or delete the workspace. |
+| `Viewer` | Read-only access to all published entries and collections. Cannot create, edit, or delete content. Cannot manage integrations or invite members. |
+
+<Info>
+  The **Owner** role cannot be assigned during an invite — it can only be transferred from the existing Owner through **Settings → Members → Transfer Ownership**.
+</Info>
+
+## Inviting Members
+
+<Steps>
+  <Step title="Open the Members settings">
+    Navigate to **Settings → Members** and click **Invite Member**.
+  </Step>
+  <Step title="Enter the invitee's email address">
+    Type the email address of the person you want to add. You can enter multiple addresses separated by commas to send batch invitations.
+  </Step>
+  <Step title="Choose a role">
+    Select either **Editor** or **Viewer** from the role dropdown. Consider granting the minimum access level the person needs to do their work.
+  </Step>
+  <Step title="Send the invite">
+    Click **Send Invite**. The invitee receives an email with a link to accept. The invitation expires after 7 days. If it expires, you can resend it from the **Pending Invites** list.
+  </Step>
+</Steps>
+
+Once an invitee accepts, they appear in the **Active Members** list and immediately gain the permissions associated with their assigned role.
+
+## Collection-Level Access
+
+In addition to workspace-wide roles, you can control access on a per-collection basis. This is useful when certain collections contain sensitive information — such as financial data, security runbooks, or unreleased product plans — that should not be visible to all workspace members.
+
+To change a collection's access level, open the collection, click the **⋯** menu in the top-right corner, and select **Collection Settings → Access**.
+
+- **Public** (default) — All workspace members, regardless of role, can view entries in this collection.
+- **Private** — Only members with the **Editor** or **Owner** role can view and interact with this collection. Viewers do not see the collection in their sidebar and cannot access it via direct link or search results.
+
+<Note>
+  Private collections are still indexed for search. However, Magpie Directive filters results so that Viewer-role members never see entries from collections they do not have access to.
+</Note>
+
+## API Key Scopes
+
+API keys operate independently of user roles. A `read`-scoped API key can query the knowledge base regardless of whether any human member with Viewer access exists. When designing integrations, keep the following in mind:
+
+- API keys are not tied to an individual user's role — they carry only the scope (`read` or `write`) defined at creation.
+- A `write`-scoped API key can create and delete entries even if all human members of the workspace are Viewers.
+- Restrict `write`-scoped keys to trusted, audited systems. Use `read`-scoped keys for any integration that only needs to retrieve data.
+
+For full details on creating and managing API keys, see the [Settings](/configuration/settings) page.
+
+## Removing Members
+
+To remove a member from your workspace, navigate to **Settings → Members**, find the user in the Active Members list, click the **⋯** menu next to their name, and select **Remove Member**.
+
+<Note>
+  When you remove a member, **all API keys associated with their account are revoked immediately**. Any integrations or scripts using those keys will begin receiving `401 Unauthorized` responses. Make sure to rotate affected keys before removing a member if continuity of service matters.
+</Note>
+
+Removed members lose access instantly — there is no grace period. Their contributed entries and collections remain in the workspace and are not deleted.

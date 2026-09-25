@@ -1,0 +1,93 @@
+---
+title: "Workspace Settings — Configure Magpie Directive Workspace"
+sidebarTitle: "Settings"
+description: "Configure your Magpie Directive workspace, including general preferences, API keys, search behavior, notifications, and data management options."
+---
+
+The Settings section of your Magpie Directive dashboard gives you full control over how your workspace behaves — from its display name and timezone to the API keys that power integrations and the search model that drives knowledge discovery. You can access all settings by clicking your workspace name in the top-left corner and selecting **Settings** from the dropdown menu.
+
+## General Settings
+
+Navigate to **Settings → General** to configure the foundational details of your workspace.
+
+- **Workspace Name** — The name displayed across the dashboard, member invites, and notification emails. Choose something recognizable to your team.
+- **Timezone** — Sets the reference timezone for timestamps on entries, digests, and scheduled notifications. Select the timezone that matches your team's primary location.
+- **Default Language** — Controls the language used for the Magpie Directive interface and spellcheck within the editor. This setting applies workspace-wide but individual members can override it in their personal preferences.
+
+<Info>
+  Changes to General Settings take effect immediately for all workspace members — no reload required.
+</Info>
+
+## API Keys
+
+API keys let external tools, scripts, and AI agents authenticate with the Magpie Directive API on behalf of your workspace. Manage them under **Settings → API Keys**.
+
+### Creating an API Key
+
+<Steps>
+  <Step title="Open API Keys settings">
+    Navigate to **Settings → API Keys** and click **New API Key**.
+  </Step>
+  <Step title="Label your key">
+    Enter a descriptive label so you can identify the key's purpose later — for example, `ci-pipeline-reader` or `slack-integration`.
+  </Step>
+  <Step title="Choose a scope">
+    Select the scope that matches the minimum access level your integration needs. See the scope table below.
+  </Step>
+  <Step title="Copy and store the key">
+    The full key is shown only once at creation. Copy it to a secure secrets manager before closing the dialog.
+  </Step>
+</Steps>
+
+### API Key Scopes
+
+| Scope | Permissions |
+|---|---|
+| `read` | Query entries, search the knowledge base, retrieve collection metadata, and read custom field values. Cannot modify any data. |
+| `write` | All `read` permissions, plus the ability to create, update, and delete entries, collections, and custom field values. |
+
+<Tip>
+  Rotate your API keys on a regular schedule — every 90 days is a reasonable baseline. To rotate a key, generate a new one with the same scope, update your integration, and then revoke the old key. Revoking a key is instant and cannot be undone.
+</Tip>
+
+### Revoking a Key
+
+Find the key in the **API Keys** list and click **Revoke**. Any request made with a revoked key immediately receives a `401 Unauthorized` response.
+
+## Search Settings
+
+Magpie Directive supports two search modes. Configure your default under **Settings → Search**.
+
+- **Full-Text Search** — Matches entries based on exact keyword occurrences. Best for codebases, structured logs, and cases where precision is more important than recall.
+- **Semantic Search** — Uses an embedding model to match entries by meaning, even when the exact keywords differ. Best for natural-language queries and exploratory knowledge discovery.
+
+Under **Semantic Model**, you can select which embedding model powers semantic search. Available options are listed in the dropdown and vary depending on your plan. Switching models triggers a background re-indexing job — your workspace remains searchable throughout, but results may be inconsistent until re-indexing completes.
+
+<Info>
+  Re-indexing time depends on the size of your workspace. A workspace with 10,000 entries typically re-indexes in under five minutes.
+</Info>
+
+## Notification Settings
+
+Control when and how Magpie Directive sends email notifications under **Settings → Notifications**.
+
+- **Entry Change Notifications** — Receive an email whenever an entry you follow is created, updated, or deleted. Toggle this on or off globally, or manage it per-collection from the collection settings panel.
+- **Digest Frequency** — Instead of individual change emails, opt for a rolled-up digest. Choose from **Daily** (sent each morning at 8 AM in your workspace timezone) or **Weekly** (sent every Monday morning).
+
+Members can override workspace-level notification defaults in their personal **Profile → Notifications** settings.
+
+## Danger Zone
+
+The **Danger Zone** section at the bottom of **Settings → General** contains irreversible workspace-level actions. Proceed carefully.
+
+### Export Workspace Data
+
+Download a full export of your workspace as a structured JSON archive. The export includes all entries, collections, custom field definitions, and member metadata. Exports are generated asynchronously — you will receive an email with a download link when the archive is ready, typically within a few minutes.
+
+### Delete Workspace
+
+<Warning>
+  Deleting your workspace is **permanent and irreversible**. All entries, collections, API keys, member records, and integrations are destroyed immediately. Magpie Directive cannot recover deleted workspaces. Export your data before proceeding.
+</Warning>
+
+To delete the workspace, type your workspace name in the confirmation field and click **Delete Workspace**. Only the workspace **Owner** can perform this action.

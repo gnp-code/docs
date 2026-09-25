@@ -1,0 +1,219 @@
+---
+title: "Agents API — Create and Manage AI Agent Identities"
+sidebarTitle: "Agents"
+description: "Reference for the Magpie Directive Agents API — create and manage named AI agent identities with scoped API keys and collection-level access controls."
+---
+
+Agents are named identities you create for AI systems — bots, LLM pipelines, automation workflows, or any programmatic consumer — that need their own access to your knowledge base. Each agent gets a dedicated API key with a defined scope and, optionally, access restricted to specific collections. This lets you audit exactly which systems are reading or writing your knowledge, rotate credentials independently, and revoke access for a single agent without affecting others.
+
+<Tip>
+  Create one agent per distinct use case or system rather than sharing a single API key across multiple integrations. Granular agent identities give you a clear audit trail and make it easy to revoke a compromised key without disrupting unrelated workflows.
+</Tip>
+
+---
+
+## List Agents
+
+Retrieve all agents configured in your workspace.
+
+```http
+GET /v1/agents
+```
+
+### Example Request
+
+```bash
+curl https://api.magpiedirective.com/v1/agents \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response
+
+<ResponseField name="data" type="array">
+  An array of agent objects.
+
+  <Expandable title="Agent object fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the agent (e.g., `agt_abc123`).
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Human-readable name for the agent.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Optional description of the agent's purpose.
+    </ResponseField>
+    <ResponseField name="scope" type="string">
+      The agent's access scope: `read` or `write`.
+    </ResponseField>
+    <ResponseField name="collections" type="array of strings">
+      Collection slugs the agent is allowed to access. An empty array means the agent has access to all collections.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of when the agent was created.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```json
+{
+  "data": [
+    {
+      "id": "agt_abc123",
+      "name": "Support Bot",
+      "description": "Reads the support knowledge base to answer customer questions.",
+      "scope": "read",
+      "collections": ["support-docs", "faq"],
+      "created_at": "2024-01-10T09:00:00Z"
+    },
+    {
+      "id": "agt_def456",
+      "name": "Content Ingestion Pipeline",
+      "description": "Writes processed documents from the content pipeline into the knowledge base.",
+      "scope": "write",
+      "collections": [],
+      "created_at": "2024-01-18T14:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Create Agent
+
+Register a new agent identity in your workspace. Requires a **read-write** API key. The agent's API key is returned only in the creation response.
+
+```http
+POST /v1/agents
+```
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>
+  A unique, human-readable name for the agent (e.g., `Support Bot` or `RAG Pipeline - Production`).
+</ParamField>
+
+<ParamField body="description" type="string">
+  An optional description explaining what this agent does and which system it represents. This is for your own reference and does not affect API behavior.
+</ParamField>
+
+<ParamField body="scope" type="string" default="read">
+  The access scope for the agent's API key. Use `read` for agents that only retrieve knowledge and `write` for agents that also create, update, or delete entries.
+</ParamField>
+
+<ParamField body="collections" type="array of strings">
+  An optional list of collection slugs to restrict this agent's access to. When provided, the agent's API key can only read from or write to the specified collections. Provide an empty array or omit this field to grant access to all collections.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.magpiedirective.com/v1/agents \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Support Bot",
+    "description": "Answers customer support questions using the support knowledge base.",
+    "scope": "read",
+    "collections": ["support-docs", "faq"]
+  }'
+```
+
+### Response — 201 Created
+
+<Warning>
+  The `api_key` field is returned **only once** in the creation response. Copy it immediately and store it securely. If you lose it, you must delete this agent and create a new one — there is no way to retrieve the key again.
+</Warning>
+
+```json
+{
+  "data": {
+    "id": "agt_ghi789",
+    "name": "Support Bot",
+    "description": "Answers customer support questions using the support knowledge base.",
+    "scope": "read",
+    "collections": ["support-docs", "faq"],
+    "api_key": "mgd_live_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "created_at": "2024-02-12T11:45:00Z"
+  }
+}
+```
+
+---
+
+## Get Agent
+
+Retrieve the details of a specific agent by its ID. Note that the `api_key` is **not** returned by this endpoint.
+
+```http
+GET /v1/agents/{id}
+```
+
+### Example Request
+
+```bash
+curl https://api.magpiedirective.com/v1/agents/agt_ghi789 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response — 200 OK
+
+```json
+{
+  "data": {
+    "id": "agt_ghi789",
+    "name": "Support Bot",
+    "description": "Answers customer support questions using the support knowledge base.",
+    "scope": "read",
+    "collections": ["support-docs", "faq"],
+    "created_at": "2024-02-12T11:45:00Z"
+  }
+}
+```
+
+---
+
+## Update Agent
+
+Modify the name, description, scope, or collection restrictions for an existing agent. Requires a **read-write** API key. Send only the fields you want to change.
+
+```http
+PUT /v1/agents/{id}
+```
+
+### Example Request
+
+```bash
+curl -X PUT https://api.magpiedirective.com/v1/agents/agt_ghi789 \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Answers customer support and billing questions.",
+    "collections": ["support-docs", "faq", "billing"]
+  }'
+```
+
+### Response — 200 OK
+
+The response returns the full updated agent object (without the `api_key`), matching the structure shown in [Get Agent](#get-agent).
+
+---
+
+## Delete Agent
+
+Permanently remove an agent and immediately revoke its API key. Any system using that key will receive `401 Unauthorized` on all subsequent requests. Requires a **read-write** API key.
+
+```http
+DELETE /v1/agents/{id}
+```
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.magpiedirective.com/v1/agents/agt_ghi789 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response — 204 No Content
+
+A successful deletion returns HTTP `204 No Content` with an empty response body. The agent and its API key are immediately and permanently deactivated.

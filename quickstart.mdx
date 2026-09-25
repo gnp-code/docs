@@ -1,0 +1,79 @@
+---
+title: "Quickstart: Get Up and Running with Magpie Directive"
+sidebarTitle: "Quickstart"
+description: "Create your account, generate an API key, and make your first knowledge entry and search query with Magpie Directive — all in under five minutes."
+---
+
+This guide walks you through everything you need to go from zero to a working Magpie Directive integration. By the end you will have a live account, a valid API key, a knowledge entry in your workspace, and a successful search query — the foundation for every workflow you'll build on top.
+
+<Steps>
+  <Step title="Sign up and access your dashboard">
+    Navigate to [app.magpiedirective.com](https://app.magpiedirective.com) and create your account using your work email address. After confirming your email, you'll land on the main dashboard.
+
+    The dashboard gives you an overview of your knowledge entries, recent activity, and team usage. Familiarize yourself with the left-hand navigation — **Knowledge**, **Search**, **Settings**, and **API** are the four areas you'll use most frequently.
+  </Step>
+
+  <Step title="Generate an API key">
+    Open **Settings** in the left-hand navigation, then select **API Keys**. Click **New Key**, give it a descriptive name (for example, `local-dev` or `ci-pipeline`), and choose either **Read-Only** or **Read-Write** access depending on what you need.
+
+    Click **Create**, then copy the key that appears — this is the only time Magpie Directive displays the full key value.
+
+    <Warning>
+      Store your API key immediately after copying it. Magpie Directive does not show the full key again after you close this dialog. If you lose it, you'll need to revoke it and generate a new one.
+    </Warning>
+  </Step>
+
+  <Step title="Make your first API call">
+    Verify your key is working by fetching your knowledge entries list. Replace `YOUR_API_KEY` with the key you just copied:
+
+    ```bash
+    curl https://api.magpiedirective.com/v1/knowledge \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    A successful response returns a JSON object with a `data` array. If your workspace is new, that array will be empty — that's expected. A `401 Unauthorized` response means your key was entered incorrectly; double-check for extra spaces or line breaks.
+  </Step>
+
+  <Step title="Add your first knowledge entry">
+    Create a knowledge entry by sending a `POST` request with a JSON body containing a title, content, and tags:
+
+    ```bash
+    curl -X POST https://api.magpiedirective.com/v1/knowledge \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "title": "My First Entry",
+        "content": "Hello, Magpie Directive!",
+        "tags": ["example"]
+      }'
+    ```
+
+    The response includes the newly created entry object with a unique `id`, a `createdAt` timestamp, and the full content you submitted. Keep note of the `id` — you can use it to update or delete the entry later.
+  </Step>
+
+  <Step title="Search your knowledge">
+    The search index updates within seconds of entry creation. Run a search query against the entry you just created:
+
+    ```bash
+    curl "https://api.magpiedirective.com/v1/search?q=hello" \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    The response returns a ranked list of matching entries. You should see the entry you created in the previous step appear in the results. The `score` field on each result indicates relevance — higher scores mean a closer match to your query.
+  </Step>
+</Steps>
+
+<Tip>
+  Never hard-code API keys in source code or commit them to version control. Store keys in environment variables or a secrets manager such as AWS Secrets Manager, HashiCorp Vault, or your CI platform's built-in secrets store. Rotate keys regularly and revoke any that may have been exposed.
+</Tip>
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="layer-group" href="/core-concepts">
+    Understand the mental model behind Magpie Directive — entries, collections, the search index, AI context windows, and more.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference">
+    Explore the full REST API: every endpoint, parameter, request body, and response schema documented in detail.
+  </Card>
+</CardGroup>

@@ -1,0 +1,135 @@
+---
+title: "Magpie Directive API Authentication and Key Scopes"
+sidebarTitle: "Authentication"
+description: "Learn how to generate API keys, set the correct Authorization header, choose key scopes, and revoke credentials for the Magpie Directive API."
+---
+
+Magpie Directive uses API key authentication. Every request you send to the API must include your key in the `Authorization` header — there are no session cookies, OAuth flows, or other mechanisms for server-to-server calls.
+
+<Warning>
+  Never commit API keys to version control. Store them in environment variables or a secrets manager (such as AWS Secrets Manager, HashiCorp Vault, or your CI provider's secret store) and read them at runtime.
+</Warning>
+
+## Generating an API Key
+
+<Steps>
+  <Step title="Open API Keys settings">
+    Log in to your Magpie Directive workspace, click your avatar in the top-right corner, and navigate to **Settings → API Keys**.
+  </Step>
+  <Step title="Create a new key">
+    Click **New Key**, then give it a descriptive name that identifies its purpose — for example, `production-backend` or `search-agent-v2`.
+  </Step>
+  <Step title="Choose a scope">
+    Select the scope that matches what your integration needs:
+    - **Read-Only** — fetch and search knowledge; no mutations allowed.
+    - **Read-Write** — full access to create, update, and delete entries, agents, and webhooks.
+
+    When in doubt, choose the narrowest scope that satisfies your use case.
+  </Step>
+  <Step title="Copy and store your key">
+    Your API key is displayed **only once** immediately after creation. Copy it now and store it somewhere secure. If you lose it, you must revoke the key and generate a new one.
+  </Step>
+</Steps>
+
+## Using Your Key
+
+Include your API key as a Bearer token in the `Authorization` header of every request:
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+Here is a complete example using `curl`:
+
+```bash
+curl https://api.magpiedirective.com/v1/knowledge \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Replace `YOUR_API_KEY` with the key you copied from Settings.
+
+## Key Scopes
+
+Magpie Directive supports two key scopes. Choose the one that reflects the minimum privilege your integration requires.
+
+<Tabs>
+  <Tab title="Read-Only">
+    A read-only key can perform the following actions:
+
+    | Action | Allowed |
+    |--------|---------|
+    | List knowledge entries | ✅ |
+    | Get a knowledge entry | ✅ |
+    | Search knowledge | ✅ |
+    | List agents | ✅ |
+    | Get an agent | ✅ |
+    | List webhooks | ✅ |
+    | Create or update entries | ❌ |
+    | Delete entries | ❌ |
+    | Create or update agents | ❌ |
+    | Create or delete webhooks | ❌ |
+
+    Use read-only keys for any integration that only needs to retrieve information — dashboards, AI agents that answer questions, or analytics pipelines.
+
+    <Tip>
+      Prefer read-only keys in client-side applications and AI agent contexts where the key may be exposed in logs or network traffic. A leaked read-only key cannot modify or delete your data.
+    </Tip>
+  </Tab>
+  <Tab title="Read-Write">
+    A read-write key can perform all read actions plus:
+
+    | Action | Allowed |
+    |--------|---------|
+    | Create knowledge entries | ✅ |
+    | Update knowledge entries | ✅ |
+    | Delete knowledge entries | ✅ |
+    | Create and update agents | ✅ |
+    | Delete agents | ✅ |
+    | Create webhooks | ✅ |
+    | Delete webhooks | ✅ |
+
+    Use read-write keys only in trusted server-side environments where the key is never exposed to end users or client devices.
+  </Tab>
+</Tabs>
+
+## Revoking a Key
+
+To revoke an API key, navigate to **Settings → API Keys**, find the key you want to remove, and click **Revoke**. Revocation takes effect immediately — any in-flight requests using that key will fail with a `401 Unauthorized` response.
+
+Revoke keys promptly when:
+- An integration is decommissioned.
+- You suspect a key has been exposed.
+- A team member who had access to the key leaves your organization.
+
+## Error Responses
+
+When authentication fails, the API returns one of the following errors:
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `401 Unauthorized` | `unauthorized` | The `Authorization` header is missing, malformed, or contains an invalid/revoked key. |
+| `403 Forbidden` | `insufficient_scope` | The key is valid but does not have the scope required by the endpoint (e.g., using a read-only key to create an entry). |
+
+**401 — Missing or invalid key:**
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "The API key provided is missing or invalid.",
+    "status": 401
+  }
+}
+```
+
+**403 — Insufficient scope:**
+
+```json
+{
+  "error": {
+    "code": "insufficient_scope",
+    "message": "This endpoint requires a read-write API key. Your current key has read-only scope.",
+    "status": 403
+  }
+}
+```

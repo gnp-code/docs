@@ -1,0 +1,113 @@
+---
+title: "Core Concepts: Understanding How Magpie Directive Works"
+sidebarTitle: "Core Concepts"
+description: "Learn the building blocks of Magpie Directive — entries, collections, search, AI context windows, API keys, and webhooks — and how they fit together."
+---
+
+Before you start building with Magpie Directive, it helps to understand the mental model of the platform. Everything in Magpie Directive revolves around a small set of composable primitives: you create structured knowledge entries, group them into collections, let the search index surface them on demand, and expose them to humans and AI agents through a secure, permission-controlled API. Understanding how these pieces relate makes every feature — from basic CRUD to advanced RAG pipelines — straightforward to reason about.
+
+## Knowledge Entries
+
+A **knowledge entry** is the atomic unit of Magpie Directive. Every piece of information you store is an entry. Each entry carries:
+
+- **Title** — a short, human-readable name that also feeds into full-text search ranking.
+- **Content** — the body of the entry, written in Markdown. Supports headings, lists, code blocks, tables, and links.
+- **Tags** — a flat list of freeform labels for cross-cutting classification (e.g., `security`, `onboarding`, `v2`).
+- **Category** — a single structured category for primary classification, used to filter and organize entries in the dashboard.
+- **Metadata** — an optional key-value map for any custom attributes your workflow needs (e.g., `{"author": "alex", "status": "reviewed"}`).
+
+Entries are immutable once written in the sense that every update creates a tracked revision. You can retrieve the full edit history of any entry through the API.
+
+## Collections
+
+A **collection** is a named group of knowledge entries. Collections let you impose structure on your knowledge base without limiting how entries are discovered. An entry can belong to multiple collections simultaneously.
+
+Common collection patterns include:
+
+- `Engineering Runbooks` — operational procedures for on-call engineers
+- `Product FAQs` — answers to the questions your support team sees most often
+- `Sales Battlecards` — competitive intelligence for your sales organization
+- `AI Agent Context` — a curated set of entries you surface to an LLM as system context
+
+Collections are created and managed through the dashboard or the API. When you query a collection through the REST API, the response respects your role-based permissions — agents and users only see entries they're authorized to access.
+
+## Search Index
+
+Every time you create or update a knowledge entry, Magpie Directive automatically updates the **search index**. The index supports two complementary retrieval modes:
+
+- **Full-text search** — keyword-based matching across titles, content, and tags. Fast and deterministic.
+- **Semantic search** — embedding-based similarity search that finds conceptually related entries even when exact keywords don't match.
+
+Both modes are available through the same `GET /v1/search` endpoint. Index updates propagate within seconds of any write, so your queries always reflect the current state of your knowledge base.
+
+## AI Context Windows
+
+Magpie Directive is designed to work as the retrieval layer in a **Retrieval-Augmented Generation (RAG)** pipeline. When an AI agent queries the API, responses are structured for token efficiency — they include only the fields relevant to the query context and omit verbose metadata that would waste context-window space.
+
+You can tune context-window responses by:
+
+- Restricting the response to specific fields (e.g., `title` and `content` only)
+- Capping the number of results returned
+- Filtering by collection, tag, or category to narrow the retrieval surface
+
+This gives you predictable, budget-conscious context injection regardless of the LLM you're using.
+
+## API Keys
+
+**API keys** are the credentials that authenticate every request to the Magpie Directive REST API. Each key is scoped to one of two access levels:
+
+| Access Level | Allowed Operations |
+|---|---|
+| **Read-Only** | `GET` requests — list entries, fetch a single entry, search, list collections |
+| **Read-Write** | All `GET` requests plus `POST`, `PUT`, `PATCH`, and `DELETE` — full CRUD on entries and collections |
+
+You can create multiple keys for different consumers — for example, a read-only key for your AI agent and a read-write key for your internal tooling. Revoke any key at any time from the **Settings → API Keys** screen without affecting other keys.
+
+## Webhooks
+
+**Webhooks** let Magpie Directive push event notifications to any HTTPS endpoint you control. Instead of polling the API for changes, you register a webhook URL and specify which events you care about.
+
+Supported events include:
+
+- `entry.created` — fires when a new knowledge entry is created
+- `entry.updated` — fires when an existing entry's content or metadata changes
+- `entry.deleted` — fires when an entry is deleted
+- `collection.updated` — fires when entries are added to or removed from a collection
+
+Each webhook delivery is a `POST` request with a JSON payload describing the event and the affected resource. Magpie Directive includes a signature header so you can verify the authenticity of every delivery on your end.
+
+## How the Pieces Fit Together
+
+The diagram below shows how these concepts relate during a typical read workflow — a human or AI agent asking a question and receiving relevant knowledge:
+
+```
+  You / Your AI Agent
+         │
+         │  GET /v1/search?q=…
+         ▼
+  ┌─────────────────┐
+  │   REST API       │  ← authenticated with an API Key
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │  Search Index    │  ← full-text + semantic, auto-updated
+  └────────┬────────┘
+           │  ranked results
+           ▼
+  ┌─────────────────┐
+  │Knowledge Entries │  ← grouped into Collections
+  └─────────────────┘
+           │
+           │  on write: triggers
+           ▼
+  ┌─────────────────┐
+  │    Webhooks      │  ← notify your downstream systems
+  └─────────────────┘
+```
+
+Write operations follow the same path in reverse: an authorized API key posts a new entry, Magpie Directive persists it, updates the search index, and fires any matching webhook events — all within a single synchronous API response cycle.
+
+<Note>
+  Ready to explore every endpoint, parameter, and response schema in detail? Visit the [API Reference](/api-reference) for the complete technical specification.
+</Note>

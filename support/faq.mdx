@@ -1,0 +1,100 @@
+---
+title: "Magpie Directive — Frequently Asked Questions (FAQ)"
+sidebarTitle: "FAQ"
+description: "Find answers to the most common questions about using, configuring, and billing for Magpie Directive — your centralized company knowledge hub."
+---
+
+This FAQ covers the questions our users ask most often — from understanding what Magpie Directive is and how it works, to managing your team, generating API keys, and navigating billing. If you don't find what you're looking for here, reach out to our support team at support@magpiedirective.com.
+
+<Accordion title="What is Magpie Directive?">
+  Magpie Directive is a centralized company brain and knowledge hub. It gives your team — and your AI systems — a single, structured place to store, organize, and retrieve institutional knowledge. Unlike a traditional document editor, Magpie Directive is built around structured entries, powerful search, and a first-class API, so your knowledge is always accessible whether you're a human reading a guide or an AI agent querying the REST API.
+</Accordion>
+
+<Accordion title="How is Magpie Directive different from a wiki?">
+  Traditional wikis are optimized for humans browsing pages. Magpie Directive is **API-first and AI-optimized** from the ground up. Every entry is a structured data object with typed fields, tags, collections, and rich metadata — not just a blob of markdown. This makes your knowledge machine-readable by default, so you can power internal tools, AI agents, and automated workflows directly from your knowledge base without scraping or reformatting anything.
+</Accordion>
+
+<Accordion title="Is there a free plan?">
+  Yes. Magpie Directive offers a free tier that includes up to **100 entries**, full API access, and one workspace. When you're ready to scale, paid plans unlock higher entry limits, additional workspaces, advanced analytics, priority support, and expanded rate limits. You can view and upgrade your plan at any time from **Settings → Billing**.
+</Accordion>
+
+<Accordion title="How do I add team members to my workspace?">
+  To invite someone to your workspace:
+
+  1. Open **Settings** from the left sidebar.
+  2. Navigate to the **Members** tab.
+  3. Click **Invite Member**.
+  4. Enter the person's email address and select their role (**Viewer** or **Editor**).
+  5. Click **Send Invite**.
+
+  They will receive an email with a link to join your workspace. Invitations expire after 7 days — you can resend or revoke them from the same Members page.
+</Accordion>
+
+<Accordion title="How do I generate an API key?">
+  To create a new API key:
+
+  1. Go to **Settings** in the left sidebar.
+  2. Click the **API Keys** tab.
+  3. Click **New Key**.
+  4. Give your key a descriptive name (e.g., `production-agent`) and select its permission scope (`read` for query-only access, or `write` for full read and write access).
+  5. Click **Generate**.
+
+  Copy the key immediately — it is only displayed once. Store it securely in an environment variable or secrets manager and never commit it to source control.
+</Accordion>
+
+<Accordion title="What formats can I import?">
+  Magpie Directive supports importing knowledge from the following formats:
+
+  - **CSV** — each row becomes a structured entry; column headers map to entry fields
+  - **JSON** — an array of entry objects following the Magpie Directive schema
+  - **Markdown files** — individual `.md` or `.mdx` files, with frontmatter parsed as entry metadata
+
+  To start an import, go to **Settings → Import**, upload your file, map your fields, and confirm. Large imports are processed asynchronously — you can monitor progress in **Settings → Import History**.
+</Accordion>
+
+<Accordion title="How quickly are new entries searchable after being created?">
+  Entries are indexed in near real-time. In practice, a newly created or updated entry becomes fully searchable within **approximately 5 seconds** of the write being confirmed. If you're building a workflow that reads immediately after writing, add a short delay or poll the entry's `indexed` status field to confirm availability before querying.
+</Accordion>
+
+<Accordion title="Does Magpie Directive support semantic or AI-powered search?">
+  Yes. In addition to keyword search, Magpie Directive supports **semantic search** powered by vector embeddings. To use it, include `mode=semantic` in your search request:
+
+  ```http
+  GET /v1/search?q=onboarding+best+practices&mode=semantic
+  ```
+
+  Semantic search understands meaning and context, so it surfaces relevant entries even when the exact keywords don't match. You can also combine modes with `mode=hybrid` to blend keyword precision with semantic recall. Semantic search is available on all plans.
+</Accordion>
+
+<Accordion title="Can I use Magpie Directive with my AI agent or LLM application?">
+  Absolutely. Magpie Directive is purpose-built for AI integration. You have two primary options:
+
+  - **REST API** — query, create, and update entries programmatically using standard HTTP requests authenticated with your API key. The full API reference is available in the [API documentation](/api-reference/introduction).
+  - **MCP Server** — connect Magpie Directive as a tool via the Model Context Protocol (MCP), allowing LLMs and AI agents to search and retrieve knowledge dynamically during inference without any custom plumbing.
+
+  Both options are available on all plans, including the free tier.
+</Accordion>
+
+<Accordion title="How do I delete my workspace?">
+  <Warning>
+    Deleting a workspace is **permanent and irreversible**. All entries, collections, API keys, members, and settings will be erased immediately and cannot be recovered. Export any data you need before proceeding.
+  </Warning>
+
+  To delete your workspace:
+
+  1. Go to **Settings** in the left sidebar.
+  2. Scroll to the **Danger Zone** section at the bottom of the page.
+  3. Click **Delete Workspace**.
+  4. Type your workspace name to confirm, then click **Permanently Delete**.
+
+  Only the workspace **Owner** can perform this action.
+</Accordion>
+
+<Accordion title="Where do I go if I need additional support?">
+  You have several options:
+
+  - **This documentation** — search or browse guides, API references, and tutorials using the search bar at the top of the page.
+  - **Email support** — contact [support@magpiedirective.com](mailto:support@magpiedirective.com) for account-specific issues. Include your workspace ID and any relevant request IDs to help us assist you faster.
+
+  When writing in, please describe the issue, the steps you took, and what you expected to happen. The more context you provide, the faster we can help.
+</Accordion>

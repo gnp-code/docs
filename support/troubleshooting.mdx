@@ -1,0 +1,127 @@
+---
+title: "Troubleshoot Common Magpie Directive Platform Issues"
+sidebarTitle: "Troubleshooting"
+description: "Diagnose and resolve the most common errors and issues you may encounter while using the Magpie Directive platform, API, and integrations."
+---
+
+This guide walks you through the most frequent problems users encounter with Magpie Directive — from API errors and search issues to webhooks and imports — and shows you exactly how to resolve each one. Work through the relevant section below, and if you're still stuck, the note at the bottom of this page tells you how to reach our support team.
+
+<Accordion title="401 Unauthorized — Authentication failed">
+  A `401 Unauthorized` response means the server could not authenticate your request. The most common causes are:
+
+  - **Missing Authorization header** — every API request must include your API key in the `Authorization` header.
+  - **Incorrect header format** — the value must follow the `Bearer` scheme exactly.
+  - **Revoked or deleted key** — if the key has been deleted or rotated, it will no longer work.
+
+  **Check your header format.** It must look exactly like this:
+
+  ```http
+  Authorization: Bearer YOUR_API_KEY
+  ```
+
+  Common mistakes include adding extra spaces, omitting the word `Bearer`, or accidentally including quotation marks around the key value.
+
+  **Verify the key is active.** Go to **Settings → API Keys** and confirm the key you're using appears in the list and has not been revoked. If it's missing, generate a new one and update your environment variables.
+</Accordion>
+
+<Accordion title="403 Forbidden — Insufficient permissions">
+  A `403 Forbidden` response means your API key is valid and recognized, but it does not have the permission scope required for the operation you're attempting.
+
+  For example, if your key was created with the `read` scope, any `POST`, `PUT`, `PATCH`, or `DELETE` request will be rejected with a `403`.
+
+  **Fix:** Generate a new API key with the appropriate scope.
+
+  1. Go to **Settings → API Keys → New Key**.
+  2. Select the `write` scope to grant full read and write access.
+  3. Replace the key in your application or environment.
+
+  <Tip>
+    Use the narrowest scope your integration actually needs. Reserve `write`-scoped keys for workflows that must both read and modify data.
+  </Tip>
+</Accordion>
+
+<Accordion title="404 Not Found — Entry or resource doesn't exist">
+  A `404 Not Found` response means the resource at the requested path does not exist in your workspace. The most common causes are:
+
+  - **Incorrect entry ID** — entry IDs are case-sensitive UUIDs. A single transposed character will produce a 404.
+  - **Entry was deleted** — if the entry was deleted by you or another team member, it is immediately removed from the API.
+  - **Wrong workspace context** — if you have multiple workspaces, verify your API key belongs to the workspace containing the entry you're querying.
+
+  **Double-check the ID** by looking it up in the Magpie Directive dashboard or by listing entries with `GET /v1/entries` and confirming the ID exists before constructing your request.
+</Accordion>
+
+<Accordion title="429 Too Many Requests — Rate limit exceeded">
+  A `429 Too Many Requests` response means you've exceeded the API rate limit for your plan within the current time window.
+
+  Every `429` response includes a `Retry-After` header that tells you how many seconds to wait before making another request:
+
+  ```http
+  HTTP/1.1 429 Too Many Requests
+  Retry-After: 12
+  ```
+
+  **What to do:**
+
+  - **Respect the `Retry-After` value.** Wait the specified number of seconds before retrying. Do not retry immediately — this will continue to return `429` and may extend your backoff window.
+  - **Implement exponential backoff.** For automated clients, use an exponential backoff strategy: wait `2^attempt` seconds between retries, with a small random jitter to avoid thundering-herd collisions.
+  - **Batch your writes.** If you're importing many entries, use the bulk import endpoint (`POST /v1/entries/bulk`) rather than looping over individual `POST /v1/entries` calls.
+  - **Upgrade your plan** if you routinely hit rate limits — higher-tier plans include significantly increased limits. See **Settings → Billing** for details.
+</Accordion>
+
+<Accordion title="Search returns no results">
+  If a search query returns an empty result set, work through these checks:
+
+  **1. Broaden your query.** Very specific or long queries may not match any entry. Try shorter, more general terms to confirm search is working, then narrow down.
+
+  **2. Check collection and tag filters.** If your request includes `collection` or `tags` parameters, those act as hard filters. Remove them temporarily to see if results appear across all collections.
+
+  ```http
+  GET /v1/search?q=onboarding
+  ```
+
+  **3. Confirm entries are published.** Draft entries are excluded from search results by default. Open the entry in the dashboard and verify its status is **Published**. You can also filter for drafts explicitly with `status=draft` to confirm the entry exists.
+
+  **4. Allow time for indexing.** If you just created or updated an entry, wait a few seconds for indexing to complete before querying.
+
+  **5. Try semantic mode.** If keyword search returns nothing useful, try `mode=semantic` — it may surface entries whose meaning matches even if the exact words don't appear.
+</Accordion>
+
+<Accordion title="Webhook not firing">
+  If your configured webhook endpoint is not receiving events, check the following:
+
+  **1. Verify your endpoint is publicly accessible.** Magpie Directive delivers webhooks over the public internet. Endpoints on `localhost`, private networks, or behind a firewall will not receive deliveries. Use a tool like [ngrok](https://ngrok.com) to expose a local endpoint for testing.
+
+  **2. Confirm your endpoint uses HTTPS.** Magpie Directive only delivers to `https://` endpoints. Plain `http://` URLs are rejected at configuration time.
+
+  **3. Review the delivery log.** Go to **Settings → Webhooks**, select your webhook, and open the **Delivery Log** tab. Each delivery attempt is recorded with its HTTP status code and response body. Look for failed attempts and examine the error details.
+
+  **4. Check your endpoint returns a 2xx status.** Magpie Directive considers a delivery successful only when your endpoint responds with a `2xx` status code within 10 seconds. If your handler takes longer or returns a non-2xx status, the delivery is marked as failed and retried with exponential backoff.
+
+  **5. Confirm the event type is selected.** When creating or editing the webhook, ensure the event types you care about (e.g., `entry.created`, `entry.updated`) are checked.
+</Accordion>
+
+<Accordion title="Imported entries not appearing in my workspace">
+  If you completed an import but the entries aren't showing up, follow these steps:
+
+  **1. Check the import job status.** Go to **Settings → Import History**. Each import run is listed with a status of `Pending`, `Processing`, `Completed`, or `Failed`. If the job is still processing, wait for it to finish.
+
+  **2. Look for format errors.** A `Completed with errors` status means the import partially succeeded. Click the job to expand the error report — each row or object that failed is listed with a reason (e.g., missing required field, invalid date format). Fix the errors in your source file and re-import the affected rows.
+
+  **3. Verify your file matches the expected schema.** For CSV imports, ensure column headers exactly match the entry field names shown in the field mapper. For JSON, each object must include at minimum a `title` field.
+
+  **4. Check for draft status.** Entries created via import default to **Published**, but if you selected **Import as Draft** during the import flow, the entries exist but won't appear in your default views. Switch your view filter to include drafts.
+</Accordion>
+
+<Accordion title="A team member can't see certain entries">
+  Access to entries in Magpie Directive is governed by both **collection privacy settings** and **member roles**. If a team member reports missing entries, check the following:
+
+  **1. Check collection visibility.** Open the collection containing the entries and go to its **Settings** tab. If the collection is set to **Private**, only members with the Editor or Owner role can view its entries. Change it to **Public** to allow all workspace members to view the collection, or promote the affected member's role to Editor or Owner.
+
+  **2. Review the member's role.** Go to **Settings → Members** and confirm the member's role. **Viewer** roles cannot see private collections they haven't been granted access to, and they cannot see draft entries. Promote the member to **Editor** if broader access is needed, or ask the workspace Owner to change the collection's visibility to **Public**.
+
+  **3. Confirm the entries are published.** Viewers can only see published entries. If the entries are still in draft, they will be invisible to Viewers regardless of collection settings.
+</Accordion>
+
+<Note>
+  If none of the steps above resolve your issue, contact our support team at [support@magpiedirective.com](mailto:support@magpiedirective.com). Include your **workspace ID** (found in **Settings → General**) and the **request ID** from the `X-Request-Id` response header — this lets us trace your specific request in our logs and diagnose the problem quickly.
+</Note>

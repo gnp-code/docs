@@ -1,0 +1,264 @@
+---
+title: "Webhooks API — Event-Driven Knowledge Notifications"
+sidebarTitle: "Webhooks"
+description: "Configure Magpie Directive webhooks to receive real-time HTTP POST notifications when knowledge entries are created, updated, or deleted in your workspace."
+---
+
+Webhooks are HTTP POST callbacks that Magpie Directive sends to your server whenever specific events occur in your workspace. Instead of polling the API to detect changes, you register an endpoint and Magpie Directive delivers event payloads to it in real time — enabling integrations like cache invalidation, downstream sync pipelines, Slack notifications, or LLM re-indexing workflows.
+
+<Warning>
+  Magpie Directive only delivers webhooks to **HTTPS** endpoints. Plain HTTP URLs are rejected when you create or update a webhook. Ensure your endpoint has a valid TLS certificate before registering it.
+</Warning>
+
+---
+
+## Events
+
+Magpie Directive emits the following webhook events:
+
+| Event | Description |
+|-------|-------------|
+| `entry.created` | A new knowledge entry was created in your workspace. |
+| `entry.updated` | An existing knowledge entry was modified (title, content, tags, or custom fields). |
+| `entry.deleted` | A knowledge entry was permanently deleted from your workspace. |
+
+---
+
+## Webhook Payload
+
+Every webhook request is an HTTP POST with a JSON body. The payload includes the event name, a timestamp, your workspace ID, and a `data` object with the relevant entry details.
+
+```json
+{
+  "event": "entry.created",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "workspace_id": "ws_abc123",
+  "data": {
+    "id": "ent_xyz789",
+    "title": "How to Configure Webhooks",
+    "tags": ["webhooks", "configuration"],
+    "collection": "product-docs"
+  }
+}
+```
+
+For `entry.deleted` events, the `data` object contains only the `id` and `title` of the deleted entry since the full content is no longer available.
+
+---
+
+## Signature Verification
+
+Every webhook request Magpie Directive sends includes an `X-Magpie-Signature` header. This is an HMAC-SHA256 signature of the raw request body, computed using your webhook secret. Verifying this signature before processing the payload confirms the request genuinely came from Magpie Directive and has not been tampered with.
+
+The signature value is a hex-encoded digest formatted as `sha256=<hex_digest>`.
+
+<CodeGroup>
+
+```python Python
+import hashlib
+import hmac
+
+def verify_signature(payload_body: bytes, secret: str, signature_header: str) -> bool:
+    """
+    Verify that a webhook payload came from Magpie Directive.
+
+    :param payload_body: The raw bytes of the request body.
+    :param secret: Your webhook secret (set when creating the webhook).
+    :param signature_header: The value of the X-Magpie-Signature header.
+    :return: True if the signature is valid, False otherwise.
+    """
+    expected = "sha256=" + hmac.new(
+        key=secret.encode("utf-8"),
+        msg=payload_body,
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(expected, signature_header)
+
+
+# Example usage (Flask)
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+WEBHOOK_SECRET = "your_webhook_secret"
+
+@app.route("/webhook", methods=["POST"])
+def handle_webhook():
+    signature = request.headers.get("X-Magpie-Signature", "")
+    if not verify_signature(request.data, WEBHOOK_SECRET, signature):
+        abort(401, "Invalid signature")
+
+    event = request.json
+    print(f"Received event: {event['event']}")
+    return "", 200
+```
+
+```javascript Node.js
+const crypto = require("crypto");
+
+/**
+ * Verify that a webhook payload came from Magpie Directive.
+ *
+ * @param {Buffer|string} payloadBody - The raw request body.
+ * @param {string} secret - Your webhook secret.
+ * @param {string} signatureHeader - The value of the X-Magpie-Signature header.
+ * @returns {boolean} True if the signature is valid.
+ */
+function verifySignature(payloadBody, secret, signatureHeader) {
+  const expected =
+    "sha256=" +
+    crypto
+      .createHmac("sha256", secret)
+      .update(payloadBody)
+      .digest("hex");
+
+  // Use timingSafeEqual to prevent timing attacks
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const receivedBuf = Buffer.from(signatureHeader, "utf8");
+
+  if (expectedBuf.length !== receivedBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, receivedBuf);
+}
+
+// Example usage (Express)
+const express = require("express");
+const app = express();
+const WEBHOOK_SECRET = "your_webhook_secret";
+
+app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
+  const signature = req.headers["x-magpie-signature"] || "";
+
+  if (!verifySignature(req.body, WEBHOOK_SECRET, signature)) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  const event = JSON.parse(req.body);
+  console.log(`Received event: ${event.event}`);
+  res.status(200).send();
+});
+```
+
+</CodeGroup>
+
+<Tip>
+  Return a `2xx` response as quickly as possible — ideally before doing any processing. Offload event handling to a background queue or async task. Magpie Directive waits up to **10 seconds** for a response before treating the delivery as failed and scheduling a retry.
+</Tip>
+
+---
+
+## Retry Policy
+
+When your endpoint returns a non-2xx status code, times out, or is unreachable, Magpie Directive retries the delivery with exponential backoff:
+
+| Attempt | Delay After Previous Failure |
+|---------|------------------------------|
+| 1st retry | 1 second |
+| 2nd retry | 2 seconds |
+| 3rd retry | 4 seconds |
+| 4th retry | 8 seconds |
+| 5th retry | 16 seconds |
+
+After **5 failed attempts**, the delivery is marked as permanently failed and no further retries are made. You can view the full delivery history, including request and response bodies, under **Settings → Webhooks** in the Magpie Directive dashboard.
+
+---
+
+## List Webhooks
+
+Retrieve all webhooks configured in your workspace.
+
+```http
+GET /v1/webhooks
+```
+
+### Example Request
+
+```bash
+curl https://api.magpiedirective.com/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "wh_abc123",
+      "url": "https://myapp.example.com/webhooks/magpie",
+      "events": ["entry.created", "entry.updated", "entry.deleted"],
+      "created_at": "2024-01-20T09:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Create Webhook
+
+Register a new webhook endpoint. Requires a **read-write** API key.
+
+```http
+POST /v1/webhooks
+```
+
+### Body Parameters
+
+<ParamField body="url" type="string" required>
+  The HTTPS URL of your endpoint. Magpie Directive will POST event payloads to this URL. Must use `https://` — plain HTTP is not accepted.
+</ParamField>
+
+<ParamField body="events" type="array of strings" required>
+  The list of events to subscribe to. Valid values: `entry.created`, `entry.updated`, `entry.deleted`. Provide all three to receive notifications for all knowledge entry changes.
+</ParamField>
+
+<ParamField body="secret" type="string">
+  An optional secret string used to sign webhook payloads with HMAC-SHA256. If provided, every request will include an `X-Magpie-Signature` header you can verify. If omitted, signatures are not sent. We strongly recommend providing a secret for all production webhooks.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.magpiedirective.com/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://myapp.example.com/webhooks/magpie",
+    "events": ["entry.created", "entry.updated", "entry.deleted"],
+    "secret": "your_webhook_secret_here"
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "data": {
+    "id": "wh_def456",
+    "url": "https://myapp.example.com/webhooks/magpie",
+    "events": ["entry.created", "entry.updated", "entry.deleted"],
+    "created_at": "2024-02-14T16:00:00Z"
+  }
+}
+```
+
+---
+
+## Delete Webhook
+
+Remove a webhook registration. Magpie Directive will immediately stop sending event payloads to the associated URL. Requires a **read-write** API key.
+
+```http
+DELETE /v1/webhooks/{id}
+```
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.magpiedirective.com/v1/webhooks/wh_def456 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response — 204 No Content
+
+A successful deletion returns HTTP `204 No Content` with an empty response body.

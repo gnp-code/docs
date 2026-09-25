@@ -1,0 +1,108 @@
+---
+title: "Magpie Directive REST API — Reference and Overview"
+sidebarTitle: "Introduction"
+description: "Explore the Magpie Directive REST API: base URL, JSON response format, authentication, rate limits, and versioning for all v1 endpoints."
+---
+
+Magpie Directive exposes a REST API over HTTPS that lets you read and write knowledge programmatically. Every request and response uses JSON, making it straightforward to integrate from any language or HTTP client.
+
+## Base URL
+
+All API requests target the following base URL:
+
+```text
+https://api.magpiedirective.com/v1
+```
+
+Append the endpoint path to this base URL for every request. For example, to list knowledge entries, call `GET https://api.magpiedirective.com/v1/knowledge`.
+
+## Authentication
+
+Every request must include your API key in the `Authorization` header:
+
+```http
+Authorization: Bearer YOUR_API_KEY
+```
+
+See the [Authentication guide](/api-reference/authentication) for instructions on generating keys, choosing scopes, and revoking keys you no longer need.
+
+## Response Format
+
+All responses return JSON. Successful responses wrap their payload in a top-level `data` field. Failed responses return an `error` object with a machine-readable `code` and a human-readable `message`.
+
+**Success response:**
+
+```json
+{
+  "data": {
+    "id": "ent_abc123",
+    "title": "Getting Started with Magpie Directive",
+    "content": "...",
+    "tags": ["onboarding", "guide"],
+    "collection": "product-docs",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Error response:**
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "The API key provided is missing or invalid.",
+    "status": 401
+  }
+}
+```
+
+Use the `error.code` field to handle specific error conditions programmatically and `error.message` to surface a meaningful description to users or logs.
+
+## Rate Limits
+
+Magpie Directive enforces per-minute rate limits based on your plan:
+
+| Plan  | Requests per Minute |
+|-------|---------------------|
+| Free  | 100                 |
+| Paid  | 1,000               |
+
+Every API response includes the following headers to help you track and respect these limits:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Total requests allowed per minute on your plan |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+| `Retry-After` | Seconds to wait before retrying (present only on 429 responses) |
+
+When you exceed your limit, the API returns a `429 Too Many Requests` response. Read the `Retry-After` header and wait the indicated number of seconds before retrying.
+
+## Versioning
+
+The current API version is **v1**, reflected in the base URL path. Magpie Directive follows these versioning policies:
+
+- **Non-breaking changes** — adding new fields, new endpoints, or new optional parameters — may be introduced at any time within the same version.
+- **Breaking changes** — removing fields, changing field types, or altering existing behavior — will increment the version to `v2` (and so on).
+- **Deprecation window** — older versions remain fully supported for **12 months** after a new version is released, giving you time to migrate.
+
+You will receive advance notice via email and in-app banners before any version is retired.
+
+## Explore the API
+
+<CardGroup cols={2}>
+  <Card title="Knowledge" icon="book" href="/api-reference/knowledge">
+    Create, read, update, and delete entries in your knowledge base.
+  </Card>
+  <Card title="Search" icon="magnifying-glass" href="/api-reference/search">
+    Run full-text and semantic searches across your knowledge base.
+  </Card>
+  <Card title="Agents" icon="robot" href="/api-reference/agents">
+    Manage AI agent identities with scoped API keys and collection access.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/api-reference/webhooks">
+    Subscribe to real-time events when entries are created or changed.
+  </Card>
+</CardGroup>

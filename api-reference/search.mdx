@@ -1,0 +1,170 @@
+---
+title: "Magpie Directive Search API — Full-Text and Semantic"
+sidebarTitle: "Search"
+description: "Search your Magpie Directive knowledge base with full-text or semantic mode, collection and tag filters, and a compact response format for AI agents."
+---
+
+The Search API lets you query your entire knowledge base with a single request. You can choose between full-text keyword matching and semantic vector search, scope results to specific collections or tags, and control response verbosity — including a compact format designed to minimize token usage when injecting results into AI agent context windows.
+
+## Search Endpoint
+
+```http
+GET /v1/search
+```
+
+### Query Parameters
+
+<ParamField query="q" type="string" required>
+  The search query string. For full-text mode, this is matched against entry titles and content. For semantic mode, this is embedded and compared against stored entry vectors.
+</ParamField>
+
+<ParamField query="mode" type="string" default="fulltext">
+  The search algorithm to use. Accepted values:
+  - `fulltext` — fast keyword-based search across titles and content.
+  - `semantic` — vector similarity search that understands natural language meaning, synonyms, and context.
+</ParamField>
+
+<ParamField query="collection" type="string">
+  Restrict results to a single collection by providing its slug (e.g., `product-docs`). Omit to search across all collections in your workspace.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  A comma-separated list of tags to filter by (e.g., `api,reference`). Only entries matching **all** provided tags are returned.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Maximum number of results to return. Minimum `1`, maximum `100`.
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of results to skip for pagination.
+</ParamField>
+
+<ParamField query="format" type="string" default="full">
+  Controls the shape of each result object. Accepted values:
+  - `full` — returns all entry fields including metadata.
+  - `compact` — returns only `id`, `title`, and `content`. Ideal for feeding results directly into an AI agent prompt without including unnecessary token overhead.
+</ParamField>
+
+### Example — Full-Text Search
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=webhook+configuration&mode=fulltext&collection=product-docs&limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Example — Semantic Search
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=How+do+I+receive+notifications+when+content+changes%3F&mode=semantic&limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+<Tip>
+  Use **semantic search** when your query is a natural language question or when users may phrase things differently from how your entries are written. Use **full-text search** for exact keyword or phrase matching — for example, searching for a product name, error code, or specific identifier.
+</Tip>
+
+### Response
+
+<ResponseField name="results" type="array">
+  An ordered array of matching knowledge entries, ranked by relevance score.
+
+  <Expandable title="Result object fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the entry.
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      The display title of the entry.
+    </ResponseField>
+    <ResponseField name="content" type="string">
+      The full Markdown content of the entry (omitted when `format=compact`).
+    </ResponseField>
+    <ResponseField name="tags" type="array of strings">
+      Tags assigned to the entry (omitted when `format=compact`).
+    </ResponseField>
+    <ResponseField name="collection" type="string">
+      The collection slug the entry belongs to (omitted when `format=compact`).
+    </ResponseField>
+    <ResponseField name="score" type="float">
+      Relevance score between `0.0` and `1.0`, where `1.0` is a perfect match. Useful for filtering low-confidence results client-side.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  The total number of matching entries found (before pagination with `limit` and `offset`).
+</ResponseField>
+
+<ResponseField name="query" type="string">
+  The original query string echoed back in the response.
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  The search mode used — either `fulltext` or `semantic`.
+</ResponseField>
+
+```json
+{
+  "results": [
+    {
+      "id": "ent_xyz789",
+      "title": "How to Configure Webhooks",
+      "content": "# Webhooks\n\nWebhooks let you receive real-time notifications when events occur...",
+      "tags": ["webhooks", "configuration"],
+      "collection": "product-docs",
+      "score": 0.94
+    },
+    {
+      "id": "ent_def456",
+      "title": "Webhook Signature Verification",
+      "content": "# Verifying Webhook Signatures\n\nEvery webhook request includes an HMAC signature...",
+      "tags": ["webhooks", "security"],
+      "collection": "product-docs",
+      "score": 0.81
+    }
+  ],
+  "total": 2,
+  "query": "webhook configuration",
+  "mode": "fulltext"
+}
+```
+
+---
+
+## Compact Format for AI Agents
+
+When you add `format=compact` to your search request, each result object contains only three fields: `id`, `title`, and `content`. All metadata fields (`tags`, `collection`, `score`) are omitted.
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=How+do+I+set+up+an+agent%3F&mode=semantic&format=compact&limit=3" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Compact response:**
+
+```json
+{
+  "results": [
+    {
+      "id": "ent_abc111",
+      "title": "Creating Your First Agent",
+      "content": "# Creating Your First Agent\n\nAgents are named identities you can create for any AI system..."
+    },
+    {
+      "id": "ent_abc222",
+      "title": "Agent Scopes and Permissions",
+      "content": "# Agent Scopes\n\nEach agent operates with either read or read-write scope..."
+    },
+    {
+      "id": "ent_abc333",
+      "title": "Managing Agent API Keys",
+      "content": "# Agent API Keys\n\nEach agent you create receives its own unique API key..."
+    }
+  ],
+  "total": 8,
+  "query": "How do I set up an agent?",
+  "mode": "semantic"
+}
+```
+
+The compact format is designed to make it as efficient as possible to inject retrieved knowledge directly into an LLM prompt or RAG pipeline — stripping away metadata you don't need at inference time and reducing the number of tokens consumed by each result.

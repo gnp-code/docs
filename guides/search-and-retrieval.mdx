@@ -1,0 +1,191 @@
+---
+title: "Search and Retrieve Knowledge Entries in Magpie Directive"
+sidebarTitle: "Search & Retrieval"
+description: "Use full-text and semantic search, apply collection and tag filters, paginate large result sets, and parse the Magpie Directive search response schema."
+---
+
+Magpie Directive provides two complementary search modes so you can choose the right retrieval strategy for each situation. Full-text search matches entries that contain your exact keywords, making it fast and predictable for lookups where you know the terminology used in the source material. Semantic search uses vector embeddings to match by meaning, making it the better choice when users phrase questions in natural language that may not share vocabulary with the underlying entries.
+
+## Full-Text Search
+
+Full-text search scans entry titles and content for exact keyword matches and ranks results by term frequency. It is the default mode when no `mode` parameter is provided.
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=refund+policy" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+A typical response looks like this:
+
+```json
+{
+  "query": "refund policy",
+  "mode": "fulltext",
+  "total": 2,
+  "results": [
+    {
+      "id": "entry_01HXYZ",
+      "title": "Refund Policy for Digital Products",
+      "content": "All digital product purchases are eligible for a full refund within 30 days...",
+      "tags": ["policy", "refunds", "digital"],
+      "score": 0.94
+    },
+    {
+      "id": "entry_01HABC",
+      "title": "Refund Policy for Physical Goods",
+      "content": "Physical goods may be returned within 14 days in original, unopened packaging...",
+      "tags": ["policy", "refunds", "physical"],
+      "score": 0.81
+    }
+  ],
+  "offset": 0,
+  "limit": 10
+}
+```
+
+## Semantic Search
+
+Semantic search converts your query into a vector embedding and finds entries whose embeddings are most similar in meaning, regardless of exact word overlap. Enable it by adding `mode=semantic` to your request.
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=can+I+get+my+money+back&mode=semantic" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Semantic mode is especially effective when:
+
+- Users phrase questions conversationally or use synonyms not present in the entry text.
+- You are building AI agent pipelines where the query is a paraphrased user intent rather than a precise keyword.
+- Your knowledge base uses technical terminology but your users describe concepts in plain language.
+
+<Note>
+  Search index latency is approximately 5 seconds. Entries created or updated via the API or dashboard are fully indexed and available in both full-text and semantic search within 5 seconds of the write operation completing.
+</Note>
+
+## Filtering Results
+
+You can narrow search results using the following query parameters on any search request, regardless of mode.
+
+| Parameter    | Type    | Description                                                    |
+| ------------ | ------- | -------------------------------------------------------------- |
+| `collection` | string  | Restrict results to entries belonging to this collection slug. |
+| `tags`       | string  | Comma-separated list of tags; returns entries matching **all** provided tags. |
+| `limit`      | integer | Number of results to return. Default: `10`. Maximum: `100`.    |
+| `offset`     | integer | Number of results to skip for pagination. Default: `0`.        |
+
+The following example retrieves semantic search results scoped to the `customer-support` collection, filtered to entries tagged with both `refunds` and `digital`, returning the second page of five results:
+
+```bash
+curl "https://api.magpiedirective.com/v1/search?q=how+do+I+return+a+purchase&mode=semantic&collection=customer-support&tags=refunds,digital&limit=5&offset=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response Schema
+
+Every search response conforms to the following schema.
+
+<ResponseField name="query" type="string">
+  The search query string exactly as received by the API.
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  The search mode used: `fulltext` or `semantic`.
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  The total number of matching entries across all pages, regardless of `limit` and `offset`.
+</ResponseField>
+
+<ResponseField name="offset" type="integer">
+  The offset value used for this response, reflecting the `offset` parameter sent in the request.
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  The limit value used for this response, reflecting the `limit` parameter sent in the request.
+</ResponseField>
+
+<ResponseField name="results" type="array">
+  An array of matching entry objects. May be empty if no entries match the query and filters.
+
+  <Expandable title="Result object fields">
+    <ResponseField name="id" type="string">
+      The unique identifier of the knowledge entry. Use this to fetch, update, or delete the entry via the API.
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      The title of the knowledge entry as authored.
+    </ResponseField>
+    <ResponseField name="content" type="string">
+      The full text content of the entry. Use `format=compact` to receive this field without accompanying metadata.
+    </ResponseField>
+    <ResponseField name="tags" type="array of strings">
+      The list of tags assigned to this entry.
+    </ResponseField>
+    <ResponseField name="score" type="number">
+      A relevance score between `0.0` and `1.0`. Higher scores indicate stronger matches. In full-text mode, this reflects term frequency; in semantic mode, it reflects embedding cosine similarity.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Pagination
+
+Use `limit` and `offset` together to page through large result sets. The `total` field in every response tells you how many entries match in total, so you can calculate the number of pages without an extra request.
+
+```python
+import requests
+
+def fetch_all_results(query: str, api_key: str) -> list:
+    """Fetch every matching entry for a query using pagination."""
+    all_results = []
+    limit = 100
+    offset = 0
+
+    while True:
+        response = requests.get(
+            "https://api.magpiedirective.com/v1/search",
+            params={"q": query, "limit": limit, "offset": offset},
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        response.raise_for_status()
+        data = response.json()
+        all_results.extend(data["results"])
+
+        if offset + limit >= data["total"]:
+            break
+
+        offset += limit
+
+    return all_results
+```
+
+## Full-Text vs. Semantic: Side-by-Side
+
+<Tabs>
+  <Tab title="Full-Text Search">
+    **Best for:** Exact keyword lookups, known terminology, high-precision queries.
+
+    ```bash
+    curl "https://api.magpiedirective.com/v1/search?q=GDPR+data+retention+policy" \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    **Characteristics:**
+    - Matches entries that literally contain your search terms.
+    - Fast and deterministic — the same query always returns the same ranked results (assuming no index changes).
+    - Lower recall on synonym-heavy or conversational queries.
+    - `score` reflects keyword frequency and distribution (TF-IDF style).
+  </Tab>
+  <Tab title="Semantic Search">
+    **Best for:** Natural-language questions, AI agent pipelines, synonym-rich queries.
+
+    ```bash
+    curl "https://api.magpiedirective.com/v1/search?q=how+long+do+we+keep+user+data+under+privacy+law&mode=semantic" \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    **Characteristics:**
+    - Matches entries by conceptual similarity, not literal overlap.
+    - Returns relevant results even when the query and entry use different vocabulary.
+    - Slightly higher latency than full-text due to embedding computation (~50–150 ms additional).
+    - `score` reflects cosine similarity between query and entry embeddings (range 0.0–1.0).
+  </Tab>
+</Tabs>

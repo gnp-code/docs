@@ -1,0 +1,117 @@
+---
+title: "Integrate Magpie Directive with Your Existing Tools"
+sidebarTitle: "Integrations"
+description: "Connect Magpie Directive to Slack, Zapier, Make, and custom tools using webhooks, native connectors, and the REST API to automate your knowledge workflows."
+---
+
+Magpie Directive is built API-first and webhook-driven, which means it connects to the rest of your toolchain without proprietary lock-in or brittle screen-scraping workarounds. Every significant event in your knowledge base emits a webhook, the REST API covers every operation available in the dashboard, and native connectors for popular no-code platforms mean you can automate workflows without writing a single line of code.
+
+## Webhooks
+
+Webhooks let external systems react to changes in your knowledge base in real time. When an entry is created, updated, or deleted, Magpie Directive sends an HTTP `POST` request to each registered endpoint with a JSON payload describing the event.
+
+**To configure a webhook endpoint:**
+
+1. Navigate to **Settings → Webhooks → Add Endpoint**.
+2. Enter the destination URL (your server or a service like Pipedream or webhook.site for testing).
+3. Select the events you want to receive.
+4. Click **Save**. Magpie Directive immediately sends a test ping to confirm the endpoint is reachable.
+
+**Events emitted:**
+
+| Event | Fired when |
+| --- | --- |
+| `entry.created` | A new knowledge entry is successfully indexed. |
+| `entry.updated` | An existing entry's title, content, tags, or collection is changed. |
+| `entry.deleted` | An entry is permanently removed from the knowledge base. |
+
+**Example webhook payload:**
+
+```json
+{
+  "event": "entry.created",
+  "timestamp": "2024-11-14T09:32:10Z",
+  "workspace": "acme-corp",
+  "data": {
+    "id": "entry_01HXYZ",
+    "title": "Refund Policy for Digital Products",
+    "content": "All digital product purchases are eligible for a full refund within 30 days...",
+    "tags": ["policy", "refunds", "digital"],
+    "collection": "customer-support",
+    "version": 1,
+    "created_at": "2024-11-14T09:32:08Z"
+  }
+}
+```
+
+<Note>
+  Magpie Directive signs every webhook payload with an `X-Magpie-Signature` header using HMAC-SHA256 and your endpoint's secret key. Always verify this signature before processing the payload to prevent spoofed requests.
+</Note>
+
+## Zapier / Make
+
+Magpie Directive offers native app connectors for both Zapier and Make (formerly Integromat), enabling no-code automation workflows without any API configuration.
+
+**Zapier** — Find the Magpie Directive app at [zapier.com/apps/magpie-directive](https://zapier.com/apps/magpie-directive). Available triggers include **New Entry Created** and **Entry Updated**; available actions include **Create Entry**, **Update Entry**, and **Search Knowledge Base**. You can chain these with any of Zapier's 6,000+ connected apps — for example, automatically creating a knowledge entry whenever a resolved Zendesk ticket is marked as a known issue.
+
+**Make** — Search for *Magpie Directive* in the Make module library. The connector exposes the same triggers and actions as the Zapier app and supports Make's advanced branching, error handling, and data transformation tools for more complex automation scenarios.
+
+## Slack
+
+The Magpie Directive Slack app lets your team receive notifications in a designated channel whenever knowledge entries are created or updated — keeping everyone informed without leaving Slack.
+
+**To install and configure the Slack app:**
+
+1. Go to **Settings → Integrations → Slack** and click **Connect to Slack**.
+2. Authorize the app on the OAuth screen and select the workspace where you want to install it.
+3. Back in Magpie Directive, choose the **Notification Channel** from the dropdown (any public or private channel the app has been invited to).
+4. Select which events trigger a notification: **New Entry**, **Updated Entry**, or both.
+5. Click **Save**. A confirmation message is posted to the selected channel immediately.
+
+Slack notifications include the entry title, a short content preview, the collection it belongs to, and a deep link back to the entry in the Magpie Directive dashboard.
+
+## MCP Server
+
+For AI agent workflows, Magpie Directive exposes a Model Context Protocol (MCP) endpoint that allows MCP-compatible agents and frameworks to call Magpie Directive as a native tool — no custom API wrapper required.
+
+Configure your MCP client with the following details:
+
+```json
+{
+  "mcpServers": {
+    "magpie-directive": {
+      "url": "https://mcp.magpiedirective.com",
+      "apiKey": "YOUR_API_KEY"
+    }
+  }
+}
+```
+
+The MCP server exposes the following tools to connected agents:
+
+| Tool | Description |
+| --- | --- |
+| `search_knowledge` | Full-text or semantic search across your knowledge base. |
+| `get_entry` | Retrieve a single entry by its ID. |
+| `list_collections` | Return all collection slugs available in your workspace. |
+
+See the [AI Agent Usage guide](/guides/ai-agent-usage) for end-to-end patterns using the MCP integration in a RAG pipeline.
+
+## Custom Integrations
+
+If the native connectors do not cover your use case, the Magpie Directive REST API and webhook system give you complete programmatic control. Any operation you can perform in the dashboard — creating entries, updating collections, searching, importing — is available as an API endpoint.
+
+Recommended patterns for custom integrations:
+
+- **Event-driven ingestion** — Use webhooks on a source system (for example, a CMS or ticketing tool) to trigger a `POST /v1/knowledge` call whenever new content is published.
+- **Scheduled sync** — Run a nightly job that pulls updated records from a source system and uses `PUT /v1/knowledge/{id}` to keep entries in sync.
+- **Agent tool wrapping** — Wrap `GET /v1/search` in a LangChain tool or OpenAI function definition to give any LLM-based agent access to your knowledge base.
+
+<CardGroup cols={2}>
+  <Card title="Webhooks Reference" icon="webhook" href="/api-reference/webhooks">
+    Full reference for webhook event schemas, signature verification, retry behavior, and delivery guarantees.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Complete REST API documentation including all endpoints, request parameters, response schemas, and authentication details.
+  </Card>
+</CardGroup>

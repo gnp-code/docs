@@ -1,0 +1,91 @@
+{
+  "projectType": "saas",
+  "projectName": "Magpie Directive",
+  "projectDescription": "A centralized company brain and knowledge hub delivering product guides, API references, and structured documentation optimized for both human readers and AI agents.",
+  "theme": "luma",
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "core-concepts"
+            ]
+          },
+          {
+            "group": "Product Guides",
+            "pages": [
+              "guides/overview",
+              "guides/knowledge-management",
+              "guides/ai-agent-usage",
+              "guides/search-and-retrieval",
+              "guides/integrations"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/settings",
+              "configuration/permissions",
+              "configuration/customization"
+            ]
+          },
+          {
+            "group": "Support",
+            "pages": [
+              "support/faq",
+              "support/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/knowledge",
+              "api-reference/search",
+              "api-reference/agents",
+              "api-reference/webhooks"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Centralized company knowledge base",
+    "AI agent-optimized documentation structure",
+    "Product guides and walkthroughs",
+    "REST API for programmatic access",
+    "Webhook integrations",
+    "Role-based permissions and access control",
+    "Full-text and semantic search",
+    "Human-readable and machine-parseable content"
+  ],
+  "publicApiSurface": [
+    "GET /api/knowledge",
+    "POST /api/knowledge",
+    "GET /api/search",
+    "GET /api/agents",
+    "POST /api/agents",
+    "POST /api/webhooks",
+    "GET /api/webhooks"
+  ]
+}

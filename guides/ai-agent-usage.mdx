@@ -1,0 +1,137 @@
+---
+title: "Using Magpie Directive as an AI Agent Knowledge Source"
+sidebarTitle: "AI Agent Usage"
+description: "Integrate Magpie Directive into LLM and RAG pipelines for token-efficient retrieval that grounds agent responses in your verified knowledge base."
+---
+
+Magpie Directive is designed from the ground up for AI agent consumption, not just human browsing. Every entry is stored in a consistent, structured format, versioned on every update, and exposed through a search API that returns clean, predictable JSON. This means your agents spend fewer tokens parsing irregular content and more tokens reasoning about it — a critical advantage in high-frequency pipelines where context-window cost compounds quickly.
+
+## Why Use Magpie Directive for AI?
+
+- **Deterministic structure** — Every API response follows the same schema, so your prompt templates never break due to formatting surprises.
+- **Versioned entries** — Each entry tracks its revision history, so you can audit exactly what knowledge an agent had access to at any point in time.
+- **Semantic search** — Embedding-based search lets agents query by meaning, not just keywords, dramatically improving recall on natural-language questions.
+- **Minimal token overhead** — The `format=compact` parameter strips metadata and returns only title and content, cutting response size by up to 60% compared to the full entry payload.
+- **Collection scoping** — Agents can be restricted to a specific collection, preventing cross-contamination between knowledge domains (for example, keeping a customer-support agent away from unrelated knowledge areas).
+
+## Basic RAG Pattern
+
+The standard retrieval-augmented generation pattern with Magpie Directive follows four steps.
+
+<Steps>
+  <Step title="Agent receives a user query">
+    Your application receives a user message — for example, *"What is the refund policy for digital products?"* — and passes it to your agent or orchestration layer.
+  </Step>
+  <Step title="Agent queries the Magpie Directive search API">
+    The agent calls `GET /v1/search` with the user query (URL-encoded) and the `format=compact` parameter to retrieve the most relevant knowledge entries while keeping the payload small.
+
+    ```bash
+    curl "https://api.magpiedirective.com/v1/search?q=refund+policy+digital+products&format=compact&limit=3" \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+  </Step>
+  <Step title="Agent inserts results into the context window">
+    The agent formats the returned entries as context and prepends them to the system prompt or user message before calling the language model. Each result includes a `title` and `content` field that map cleanly to a simple context block.
+  </Step>
+  <Step title="Agent generates a grounded response">
+    The language model generates a response anchored to the retrieved knowledge, citing or paraphrasing the verified entries rather than relying on parametric memory. The result is more accurate, auditable, and consistent across runs.
+  </Step>
+</Steps>
+
+## Code Example
+
+The following Python snippet shows a complete RAG call: it queries Magpie Directive for relevant entries, formats them as context, and passes them to OpenAI's chat completions endpoint.
+
+```python
+import os
+import requests
+from openai import OpenAI
+
+MAGPIE_API_KEY = os.environ["MAGPIE_API_KEY"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+
+def retrieve_context(query: str, limit: int = 3) -> str:
+    """Query Magpie Directive and return compact context string."""
+    response = requests.get(
+        "https://api.magpiedirective.com/v1/search",
+        params={"q": query, "format": "compact", "limit": limit},
+        headers={"Authorization": f"Bearer {MAGPIE_API_KEY}"},
+    )
+    response.raise_for_status()
+    results = response.json().get("results", [])
+
+    context_blocks = []
+    for entry in results:
+        context_blocks.append(f"## {entry['title']}\n{entry['content']}")
+
+    return "\n\n".join(context_blocks)
+
+
+def answer_with_context(user_query: str) -> str:
+    """Retrieve knowledge context and generate a grounded response."""
+    context = retrieve_context(user_query)
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful assistant. Answer the user's question using "
+                "only the knowledge entries provided below. If the answer is not "
+                "covered by the entries, say so clearly.\n\n"
+                f"KNOWLEDGE CONTEXT:\n{context}"
+            ),
+        },
+        {"role": "user", "content": user_query},
+    ]
+
+    completion = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+    )
+    return completion.choices[0].message.content
+
+
+if __name__ == "__main__":
+    query = "What is the refund policy for digital products?"
+    print(answer_with_context(query))
+```
+
+## Compact Format
+
+By default, the search API returns full entry objects that include metadata fields such as `created_at`, `updated_at`, `collection`, `version`, and `score`. For AI agent use cases, most of this metadata is unnecessary and inflates your context window.
+
+Append `format=compact` to any search request to receive a slimmed-down response that contains only `id`, `title`, and `content` for each result. This reduces per-entry token consumption significantly and is the recommended format for all agent pipelines unless you explicitly need metadata for auditing or routing logic.
+
+```bash
+# Full format (default) — includes all metadata fields
+GET /v1/search?q=your+query
+
+# Compact format — title and content only
+GET /v1/search?q=your+query&format=compact
+```
+
+## MCP Integration
+
+Magpie Directive exposes a Model Context Protocol (MCP) endpoint, allowing MCP-compatible agents and orchestration frameworks to call it as a native tool without writing custom API integration code.
+
+Configure your MCP client with the following server URL and your Magpie Directive API key:
+
+```json
+{
+  "mcpServers": {
+    "magpie-directive": {
+      "url": "https://mcp.magpiedirective.com",
+      "apiKey": "YOUR_API_KEY"
+    }
+  }
+}
+```
+
+Once connected, the MCP server exposes tools for searching entries, retrieving a specific entry by ID, and listing collections — all usable directly in your agent's tool-calling loop without any additional wrapper code.
+
+<Tip>
+  Use the `collection` query parameter to scope your agent's search to a specific subset of your knowledge base. For example, a customer-support agent should query `collection=customer-support` to avoid surfacing content from unrelated areas. Scoping reduces noise, improves relevance scores, and prevents accidental information leakage across knowledge domains.
+</Tip>

@@ -1,0 +1,107 @@
+---
+title: "Build and Manage Your Magpie Directive Knowledge Base"
+sidebarTitle: "Knowledge Management"
+description: "Learn how to create, organize, tag, update, and delete knowledge entries in Magpie Directive to keep your knowledge base accurate and discoverable."
+---
+
+Knowledge management in Magpie Directive is the process of authoring structured entries, grouping them into collections, and keeping them current so that both human readers and AI agents can reliably retrieve the right information. Every entry you create becomes an indexed, versioned record that is instantly searchable — through the dashboard, the REST API, or an AI agent's tool call.
+
+## Creating Entries
+
+You can create knowledge entries directly from the dashboard UI or programmatically via the API. Both paths produce an identical, fully indexed entry.
+
+<Tabs>
+  <Tab title="Dashboard UI">
+    <Steps>
+      <Step title="Open the New Entry form">
+        In the left sidebar, click **Knowledge Base**, then select **New Entry** in the top-right corner of the entries list.
+      </Step>
+      <Step title="Fill in the entry details">
+        Provide a clear **Title**, write or paste your **Content** in the rich-text editor, assign one or more **Tags**, and choose a **Collection** from the dropdown. All fields except Collection are required.
+      </Step>
+      <Step title="Save and publish">
+        Click **Save Entry**. Magpie Directive indexes the entry within approximately 5 seconds, after which it appears in search results and API responses.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    <Steps>
+      <Step title="Obtain your API key">
+        Navigate to **Settings → API Keys** and copy your secret key. Include it as a Bearer token on every request.
+      </Step>
+      <Step title="Send a POST request">
+        Call `POST /v1/knowledge` with a JSON body containing your entry data.
+
+        ```bash
+        curl -X POST https://api.magpiedirective.com/v1/knowledge \
+          -H "Authorization: Bearer YOUR_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "title": "Refund Policy for Digital Products",
+            "content": "All digital product purchases are eligible for a full refund within 14 days of purchase, provided the download has not been accessed more than twice.",
+            "tags": ["policy", "refunds", "digital"],
+            "collection": "customer-support"
+          }'
+        ```
+      </Step>
+      <Step title="Confirm the response">
+        A successful request returns `201 Created` with the new entry object, including its assigned `id`. Store this `id` if you need to update or delete the entry later.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Organizing with Collections
+
+Collections are named groups that let you partition your knowledge base by team, product area, or use case. You create a collection once and then assign any number of entries to it.
+
+To create a collection, go to **Knowledge Base → Collections → New Collection**, enter a name and an optional description, then click **Create**. Once a collection exists, you can assign entries to it during creation or by editing an existing entry and updating the **Collection** field.
+
+When naming collections, use lowercase, hyphen-separated slugs (for example, `customer-support`, `engineering-runbooks`, `product-specs`). This naming pattern keeps API filtering predictable and avoids ambiguity when multiple teams share the same Magpie Directive workspace.
+
+<Tip>
+  Keep collection names stable over time. Renaming a collection does not break existing entries, but it does change the `collection` filter value you pass to the search API — so any hard-coded agent prompts or integration filters that reference the old name will stop matching until updated.
+</Tip>
+
+## Tagging Best Practices
+
+Tags complement collections by providing cross-cutting labels that span multiple collections. A single entry can carry as many tags as needed.
+
+<Tip>
+  Establish a shared tag vocabulary before your team starts authoring entries at scale. Inconsistent tags — for example, mixing `refund`, `refunds`, and `Refund Policy` across entries — silently degrade search recall and retrieval quality for AI agents. Maintain a short canonical tag list in a pinned entry or external style guide, and enforce it during entry review.
+</Tip>
+
+## Updating Entries
+
+To update an existing entry via the API, send a `PUT` request to `/v1/knowledge/{id}` with the fields you want to change. You only need to include the fields being updated — omitted fields retain their current values.
+
+```bash
+curl -X PUT https://api.magpiedirective.com/v1/knowledge/entry_01HXYZ \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "All digital product purchases are eligible for a full refund within 30 days of purchase, provided the download has not been accessed more than twice.",
+    "tags": ["policy", "refunds", "digital", "updated-2024"]
+  }'
+```
+
+A successful response returns `200 OK` with the full updated entry object. The search index reflects the change within approximately 5 seconds.
+
+## Deleting Entries
+
+To permanently remove an entry, send a `DELETE` request to `/v1/knowledge/{id}`.
+
+```bash
+curl -X DELETE https://api.magpiedirective.com/v1/knowledge/entry_01HXYZ \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+<Warning>
+  Deletion is permanent and cannot be undone. Magpie Directive does not maintain a recycle bin or soft-delete state for knowledge entries. If there is any chance you will need the content again, export the entry or copy its content before deleting.
+</Warning>
+
+A successful delete returns `204 No Content`. The entry is removed from the search index immediately.
+
+## Bulk Import
+
+If you are migrating an existing knowledge base into Magpie Directive, you can import entries in bulk rather than creating them one by one. Navigate to **Settings → Import**, choose either **CSV** or **JSON** as your file format, and upload your file. The importer maps columns (CSV) or keys (JSON) to entry fields and previews the first ten rows before committing the import. Required columns are `title` and `content`; optional columns are `tags` (comma-separated in CSV, array in JSON) and `collection`.
