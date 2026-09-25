@@ -74,7 +74,15 @@ Neither role can place orders, and **only the Organization owner can assign or r
 
 A **person** verifies a matched invoice ([MAG-200](https://linear.app/magpiedirective/issue/MAG-200)). Agents can enter invoices and run matches, but they cannot verify.
 
-Once verified, the **whole record locks**: no adjustments and no credits posted against it. **Only the owner or an AP manager can unlock** it, and every unlock is audited.
+Once verified, the **whole record locks**: no adjustments and no credits posted against it. **Only the owner, an AP manager, or a person the owner has given unlock access to** can unlock it. Every unlock is audited.
+
+<Note>
+  The owner can give unlock access to a specific person who holds an AP role, without making them an AP manager. It covers unlock only, not the override, and only the owner can give it or take it away.
+</Note>
+
+<Info>
+  **Prototype:** [Receiving Desk](https://claude.ai/artifact/RHaZUyV4tGc2btmNFQEW4E) models these rules with 25 automated checks.
+</Info>
 
 ## Stack
 
